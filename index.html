@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flashcards de Culture Patrimoniale</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     <!-- Chosen Palette: Pastel Culture Heritage Palette -->
     <!-- Application Structure Plan: A single-page flashcard application. The main view displays one card at a time with a flip animation on click. Navigation includes 'Previous'/'Next' buttons and a progress counter. Above the card, users can filter the deck by predefined categories (e.g., Institutions, Lois & Textes, Concepts) or use a search bar for instant filtering. This structure was chosen to provide a flexible and interactive study tool, superior to a static list, allowing users to review sequentially, by theme, or by searching for specific terms, which directly supports the goal of 'révisions de concours'. -->
     <!-- Visualization & Content Choices: Report Info: List of heritage topics -> Goal: Memorization/Study -> Presentation Method: Interactive HTML/CSS flashcards with category-themed colors -> Interaction: Click to flip, button navigation, category/search filtering. Colors are used as a visual cue for each category, enhancing recognition and a sense of progress. -> Justification: This interactive format aids active recall, a proven study technique. Filtering allows focused revision sessions. The color coding adds an extra layer of visual organization and memorization. -> Library/Method: Vanilla JS for logic, Tailwind CSS for styling. No charts are needed. -->
@@ -31,6 +30,8 @@
             --exemples-color: #C4A7E7;
             --personnalites-color: #A2D1A1;
             --acteurs-prives-color: #FBE5E5;
+            --documentation-color: #FFECB3;
+            --conservation-color: #B2DFDB;
         }
         body {
             background-color: var(--background-color);
@@ -77,11 +78,11 @@
             background-color: var(--secondary-color);
             transform: rotateY(180deg);
         }
-        .nav-button, .category-button {
+        .nav-button, .category-button, #shuffle-btn {
             transition: all 0.2s ease-in-out;
             border: 1px solid var(--primary-color);
         }
-        .nav-button:hover, .category-button:hover {
+        .nav-button:hover, .category-button:hover, #shuffle-btn:hover {
             background-color: var(--primary-color);
             color: white;
         }
@@ -99,6 +100,8 @@
         .bg-exemples { background-color: var(--exemples-color); }
         .bg-personnalites { background-color: var(--personnalites-color); }
         .bg-acteurs { background-color: var(--acteurs-prives-color); }
+        .bg-documentation { background-color: var(--documentation-color); }
+        .bg-conservation { background-color: var(--conservation-color); }
 
         @media print {
             body {
@@ -146,25 +149,8 @@
             .print-card-exemples { border-color: var(--exemples-color); }
             .print-card-personnalites { border-color: var(--personnalites-color); }
             .print-card-acteurs { border-color: var(--acteurs-prives-color); }
-        }
-        .qrcode-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .qrcode-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            text-align: center;
-            max-width: 90%;
+            .print-card-documentation { border-color: var(--documentation-color); }
+            .print-card-conservation { border-color: var(--conservation-color); }
         }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -211,25 +197,14 @@
                 <button id="csv-btn" class="px-6 py-3 rounded-lg border border-[--primary-color] text-[--primary-color] font-semibold shadow-md hover:bg-[--primary-color] hover:text-white transition">
                     Télécharger en CSV
                 </button>
-                <button id="qrcode-btn" class="px-6 py-3 rounded-lg border border-[--primary-color] text-[--primary-color] font-semibold shadow-md hover:bg-[--primary-color] hover:text-white transition">
-                    Générer un QR Code
+                <button id="shuffle-btn" class="px-6 py-3 rounded-lg border border-[--primary-color] text-[--primary-color] font-semibold shadow-md hover:bg-[--primary-color] hover:text-white transition">
+                    Mélanger les fiches
                 </button>
             </div>
         </main>
     </div>
 
     <div id="print-view" class="print-view hidden"></div>
-
-    <div id="qrcode-modal" class="qrcode-modal hidden">
-        <div class="qrcode-content">
-            <h2 class="text-2xl font-bold mb-4">Scannez pour ouvrir l'application</h2>
-            <canvas id="qrcode-canvas" class="w-64 h-64 mb-4 mx-auto"></canvas>
-            <p class="text-sm text-gray-600 mb-4">
-                Scannez ce QR Code pour transférer l'outil sur votre téléphone ou un autre appareil. Il fonctionne hors ligne.
-            </p>
-            <button id="close-qrcode-modal" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-medium">Fermer</button>
-        </div>
-    </div>
 
     <script>
         const allCards = [
@@ -422,7 +397,7 @@
             { recto: "La mission archéologique", verso: "Ensemble des opérations de recherche archéologique (diagnostic, fouille, étude du mobilier).", category: "Concepts" },
             { recto: "Le service des archives de France", verso: "Service de l'État qui gère la politique des archives en France, notamment la conservation et la communication des documents.", category: "Institutions" },
             { recto: "Le Plan national de numérisation des collections", verso: "Dispositif d'État qui vise à numériser les collections des musées, des bibliothèques et des archives pour les rendre accessibles en ligne.", category: "Dispositifs" },
-            { recto: "La conservation préventive", verso: "Ensemble des mesures qui visent à éviter ou à limiter la dégradation des biens culturels (ex: contrôle de l'humidité, de la température, de la lumière).", category: "Concepts" },
+            { recto: "La conservation préventive", verso: "Ensemble des mesures qui visent à éviter ou à limiter la dégradation des biens culturels (ex: contrôle de l'humidité, de la température, de la lumière).", category: "Conservation" },
             { recto: "Les professionnels du patrimoine", verso: "Conservateurs, restaurateurs, archéologues, historiens de l'art, qui travaillent à la protection et à la mise en valeur du patrimoine.", category: "Concepts" },
             { recto: "Les subventions", verso: "Aides financières de l'État et des collectivités territoriales aux institutions culturelles et aux projets de restauration.", category: "Données" },
             { recto: "Le micro-mécénat", verso: "Forme de mécénat qui permet à de nombreux donateurs de faire de petits dons à un projet culturel.", category: "Dispositifs" },
@@ -439,21 +414,21 @@
             { recto: "La Maison de l'histoire de France", verso: "Projet de musée qui a été abandonné, et qui a soulevé des questions sur la place de l'histoire dans les musées et la mémoire collective.", category: "Exemples" },
             { recto: "Les collections de musées", verso: "Ensemble des biens culturels conservés par un musée, qui constituent son patrimoine.", category: "Concepts" },
             { recto: "Le droit de préemption", verso: "Droit de l'État de se substituer à l'acheteur d'un bien culturel pour l'acquérir à l'amiable ou par voie d'expropriation.", category: "Lois & Textes" },
-            { recto: "La taxidermie", verso: "Technique de conservation des animaux, qui est utilisée dans les musées d'histoire naturelle.", category: "Concepts" },
+            { recto: "La taxidermie", verso: "Technique de conservation des animaux, qui est utilisée dans les musées d'histoire naturelle.", category: "Conservation" },
             { recto: "Le droit du patrimoine", verso: "Branche du droit qui régit la protection, la conservation et la mise en valeur du patrimoine.", category: "Lois & Textes" },
             { recto: "Le patrimoine funéraire", verso: "Ensemble des biens culturels liés aux rites et aux pratiques funéraires (cimetières, tombeaux, monuments).", category: "Concepts" },
             { recto: "Le Plan national de lutte contre les vols d'œuvres d'art", verso: "Dispositif d'État qui vise à lutter contre le trafic illicite de biens culturels.", category: "Dispositifs" },
             { recto: "Le patrimoine scientifique et technique", verso: "Ensemble des biens culturels liés à l'histoire des sciences et des techniques (instruments scientifiques, machines, archives).", category: "Concepts" },
             { recto: "Le patrimoine de l'eau", verso: "Ensemble des biens culturels liés à la gestion de l'eau (canaux, aqueducs, fontaines, barrages).", category: "Concepts" },
             { recto: "Le patrimoine industriel", verso: "Ensemble des biens culturels liés à l'histoire de l'industrie (usines, machines, sites miniers).", category: "Concepts" },
-            { recto: "La préservation des monuments historiques", verso: "Actions de conservation et de restauration des monuments historiques pour les protéger de la dégradation et de la destruction.", category: "Concepts" },
+            { recto: "La préservation des monuments historiques", verso: "Actions de conservation et de restauration des monuments historiques pour les protéger de la dégradation et de la destruction.", category: "Conservation" },
             { recto: "Le Centre des monuments nationaux", verso: "Établissement public qui gère les monuments historiques appartenant à l'État (plus de 100 monuments).", category: "Institutions" },
             { recto: "La Caisse nationale des monuments historiques et des sites", verso: "L'ancien nom du Centre des monuments nationaux, qui a été remplacé en 2000.", category: "Institutions" },
             { recto: "Les musées d'archéologie", verso: "Musées qui présentent des collections archéologiques, issus de fouilles ou d'acquisitions.", category: "Concepts" },
             { recto: "Le Centre Pompidou Metz", verso: "Première décentralisation du Centre Pompidou, qui a ouvert ses portes à Metz en 2010.", category: "Exemples" },
             { recto: "Le Grand Louvre", verso: "Projet d'aménagement du Louvre, qui a permis de le transformer en un grand musée moderne (pyramide, salles d'exposition, réserves).", category: "Exemples" },
             { recto: "Le rapport de la Cour des comptes sur les musées", verso: "Rapport qui évalue la gestion des musées et propose des pistes d'amélioration.", category: "Rapports & Études" },
-            { recto: "La conservation-restauration", verso: "Activités scientifiques et techniques qui visent à préserver les biens culturels et à leur rendre leur intégrité.", category: "Concepts" },
+            { recto: "La conservation-restauration", verso: "Activités scientifiques et techniques qui visent à préserver les biens culturels et à leur rendre leur intégrité.", category: "Conservation" },
             { recto: "Le mécénat privé", verso: "Soutien financier d'un particulier ou d'une entreprise à un projet culturel.", category: "Dispositifs" },
             { recto: "La Fondation Louis Vuitton", verso: "Fondation privée qui a ouvert un musée d'art contemporain à Paris, qui présente la collection d'art de son fondateur.", category: "Institutions" },
             { recto: "La Friche la Belle de Mai à Marseille", verso: "Exemple de reconversion d'un site industriel en lieu culturel, qui regroupe des artistes, des associations et des entreprises.", category: "Exemples" },
@@ -466,6 +441,21 @@
             { recto: "Le Centre national des arts plastiques (CNAP)", verso: "Établissement public qui soutient la création, la production et la diffusion des œuvres d'art contemporain.", category: "Institutions" },
             { recto: "La Cour des comptes", verso: "Institution qui contrôle la gestion des institutions publiques, y compris les musées et les monuments historiques.", category: "Institutions" },
             { recto: "La décentralisation culturelle", verso: "Processus de transfert de compétences de l'État aux collectivités territoriales en matière culturelle.", category: "Concepts" },
+            { recto: "L'histoire des musées et des collections en France", verso: "Développement des musées en France, de l'Ancien Régime (cabinets de curiosités) au XIXe siècle (musée universel) et à l'époque contemporaine.", category: "Concepts" },
+            { recto: "L'histoire des archives", verso: "Évolution des archives en France, de la conservation des actes royaux à l'époque contemporaine (loi de 1979) et à la création d'institutions publiques (Archives nationales).", category: "Concepts" },
+            { recto: "La législation sur les musées, les archives, le patrimoine et les biens patrimoniaux", verso: "Ensemble des textes juridiques qui régissent le secteur, notamment les codes du patrimoine, de l'urbanisme et de l'environnement.", category: "Lois & Textes" },
+            { recto: "L'organisation administrative des musées et des archives", verso: "Structure hiérarchique et fonctionnelle des institutions, avec des services dédiés à la conservation, à la médiation, à l'administration et à la gestion des collections.", category: "Concepts" },
+            { recto: "La connaissance des partenaires institutionnels et associatifs, publics et privés", verso: "Collaboration entre les musées et les archives et leurs partenaires (État, collectivités, associations, fondations, entreprises privées).", category: "Concepts" },
+            { recto: "La gestion et la politique des activités de médiation", verso: "Définition des objectifs, conception, mise en œuvre et évaluation des actions de médiation (conférences, ateliers, visites guidées).", category: "Concepts" },
+            { recto: "Les fonctions d'accueil, de communication et de promotion", verso: "Missions des musées et des archives pour accueillir, informer et attirer les publics (signalétique, sites internet, réseaux sociaux, relations presse).", category: "Concepts" },
+            { recto: "Les typologies et l'analyse des publics", verso: "Classification des publics (familles, jeunes, scolaires, personnes en situation de handicap) et méthodes d'analyse de leur fréquentation et de leurs attentes.", category: "Concepts" },
+            { recto: "Le discours sur l'œuvre et le document d'archives : les techniques et les différentes approches de la présentation orale, écrite et audiovisuelle", verso: "Méthodes de présentation des œuvres et des documents, qui s'adaptent au public et au support (visite guidée, audioguide, catalogue, vidéo).", category: "Concepts" },
+            { recto: "Les produits et les services aux publics : typologie (opérations, programmes et projets), les situations : conférences, ateliers, expositions, documents d'aide à la visite, le musée et les archives hors les murs, les sites internet, les réseaux sociaux", verso: "Diversité des produits et des services proposés aux publics, qui vont de la visite guidée au site internet, en passant par les ateliers et les expositions itinérantes.", category: "Concepts" },
+            { recto: "L'inventaire muséographique et les méthodes de documentation", verso: "Processus de recensement des collections de musées (inventaire, récolement) et méthodes de documentation (fiches d'inventaire, bases de données).", category: "Documentation" },
+            { recto: "Les techniques de description archivistique", verso: "Méthodes de description des documents d'archives, qui permettent de les identifier, de les classer et de les indexer pour les rendre accessibles au public.", category: "Documentation" },
+            { recto: "Les techniques de l'étude scientifique des œuvres", verso: "Méthodes d'analyse des œuvres d'art (imagerie, analyse chimique, datation au carbone 14) pour en comprendre la composition, la technique et l'histoire.", category: "Conservation" },
+            { recto: "La conservation préventive et curative et la pérennisation des données", verso: "Actions visant à prévenir la dégradation des biens culturels (préventive) et à les restaurer (curative), ainsi que la préservation des données numériques.", category: "Conservation" },
+            { recto: "La déontologie, l'histoire et les techniques de la conservation et de la restauration des œuvres et des archives", verso: "Règles éthiques, évolution des pratiques et méthodes techniques qui régissent la conservation et la restauration du patrimoine.", category: "Conservation" },
         ];
         
         const categoryMap = {
@@ -479,7 +469,9 @@
             'Événements': 'evenements',
             'Exemples': 'exemples',
             'Personnalités': 'personnalites',
-            'Acteurs privés': 'acteurs'
+            'Acteurs privés': 'acteurs',
+            'Documentation': 'documentation',
+            'Conservation': 'conservation'
         };
 
         let currentCards = [...allCards];
@@ -499,13 +491,10 @@
         const flashcardContainer = document.getElementById('flashcard-container');
         const printBtn = document.getElementById('print-btn');
         const csvBtn = document.getElementById('csv-btn');
-        const qrcodeBtn = document.getElementById('qrcode-btn');
+        const shuffleBtn = document.getElementById('shuffle-btn');
         const printView = document.getElementById('print-view');
         const appUi = document.getElementById('app-ui');
-        const qrcodeModal = document.getElementById('qrcode-modal');
-        const closeQrcodeModalBtn = document.getElementById('close-qrcode-modal');
-        const qrcodeCanvas = document.getElementById('qrcode-canvas');
-
+        
         function updateCard() {
             if (currentCards.length > 0) {
                 flashcardContainer.classList.remove('hidden');
@@ -518,7 +507,6 @@
                 progress.textContent = `${currentIndex + 1} / ${currentCards.length}`;
 
                 const categoryClass = categoryMap[card.category] || '';
-                flashcard.classList.remove(...Object.values(categoryMap).map(c => `bg-${c}`));
                 document.querySelector('.card-back').classList.remove(...Object.values(categoryMap).map(c => `bg-${c}`));
                 if (categoryClass) {
                     document.querySelector('.card-back').classList.add(`bg-${categoryClass}`);
@@ -582,6 +570,15 @@
             currentIndex = 0;
             updateCard();
         }
+        
+        function shuffleCards() {
+            for (let i = currentCards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentCards[i], currentCards[j]] = [currentCards[j], currentCards[i]];
+            }
+            currentIndex = 0;
+            updateCard();
+        }
 
         flashcard.addEventListener('click', () => {
             isFlipped = !isFlipped;
@@ -605,6 +602,8 @@
         searchInput.addEventListener('input', (e) => {
             filterBySearch(e.target.value);
         });
+
+        shuffleBtn.addEventListener('click', shuffleCards);
 
         document.addEventListener('keydown', (e) => {
             if (searchInput === document.activeElement) return;
@@ -656,24 +655,6 @@
                 link.click();
                 document.body.removeChild(link);
             }
-        });
-
-        qrcodeBtn.addEventListener('click', () => {
-            const htmlContent = document.documentElement.outerHTML;
-            const dataUri = 'data:text/html;charset=UTF-8,' + encodeURIComponent(htmlContent);
-
-            const qr = new QRious({
-                element: qrcodeCanvas,
-                value: dataUri,
-                size: 256,
-                padding: 10
-            });
-            
-            qrcodeModal.classList.remove('hidden');
-        });
-
-        closeQrcodeModalBtn.addEventListener('click', () => {
-            qrcodeModal.classList.add('hidden');
         });
         
         createCategories();
